@@ -1,13 +1,17 @@
+from time import sleep
+
 from pyspark.sql import SparkSession
 from pyspark.sql.types import *
 from pyspark.sql.functions import *
 
+# DataFrame
 spark = SparkSession. \
     builder. \
     appName("RDD"). \
-    master("local"). \
+    master("local[*]"). \
     getOrCreate()
 
+# RDD
 sc = spark.sparkContext
 
 
@@ -20,13 +24,14 @@ def rdd_creation():
     # we can build RDDs out of local collections
     numbers = range(1, 1000000)
     numbers_rdd = sc.parallelize(numbers, 4)
-    # print(numbers_rdd.collect())
+    print(numbers_rdd.collect())
 
     # read a file in parallel
     stocks_rdd_v2 = sc.textFile("../sources/stocks/aapl.csv"). \
-        map(split_row). \
+        map(lambda row: row.split(",")). \
         filter(lambda tokens: float(tokens[2]) > 15)
     # print(stocks_rdd_v2.collect())
+
 
     # read from a DF
     stocks_df = spark.read.csv("../sources/stocks"). \
@@ -58,7 +63,7 @@ def rdd_creation():
     company_names_rdd = stocks_rdd_v3\
         .map(lambda row: row.company)\
         .distinct()
-    print(company_names_rdd.collect())
+    # print(company_names_rdd.collect())
 
     # counting
     total_entries = stocks_rdd_v3.count()  # action - the RDD must be evaluated
@@ -92,3 +97,4 @@ Exercises
 
 if __name__ == '__main__':
     rdd_creation()
+    sleep(10000)
