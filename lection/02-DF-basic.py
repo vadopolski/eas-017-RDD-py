@@ -44,5 +44,13 @@ def demo_manual_schema():
 
 # 2. CASHING
 
+
+# 3. Catalyst
+
+#  DAG => Parsed Plan => Analyzed plan => Opt plan => Physical plan => Codegeneration
+
+
+
+
 if __name__ == '__main__':
     demo_manual_schema()
