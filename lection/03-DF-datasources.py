@@ -16,19 +16,56 @@ def file_system_HDFS_S3_FTP():
         format("json"). \
         option("inferSchema", "true"). \
         option("mode", "failFast"). \
-        option("path", "../data/cars"). \
+        option("path", "../sources/cars"). \
         load()
+
+    # HDFS
+    # option("path", "hdfs://nn1home:8020/sources/cars"). \
+
+    # FTP
+    # option("path", "ftp://user:pwd/192.168.1.5/sources/cars"). \
+
+    # S3
+    # option("path", s3://bucket-name/sources/cars)
+
+    cars_df.show()
 
     cars_df_v2 = spark.read. \
         format("json"). \
-        options(mode="failFast", path="../data/cars", inferSchema="true"). \
+        options(mode="failFast", path="../sources/cars", inferSchema="true"). \
         load()
+             # /sources/cars
+    # 10.1.1.1 node1 -> block1     S3 NETWORK                             -> partition1 -> task1
+    # 10.1.1.2 node2 -> block2 -> Spark Driver -> Name Node -> ip adress -> partition2 -> task2
+    # 10.1.1.3 node3 -> block2                                           -> parttion3 -> task3
 
-    cars_df.write. \
+    #
+
+
+    cars_df.\
+        repartition(3). \
+        write. \
         format("json"). \
         mode("overwrite"). \
-        option("path", "../data/cars_dupe"). \
+        option("path", "../sources/cars_dupe"). \
         save()
+
+
+    # OZU           HDFS data node
+    # partition1 -> block1 -> node1 v
+    # partition2 -> block2 -> node2 v
+    # partition3 -> block3 -> node3 -> error
+    # spark.yarn.max.executor.failures
+
+
+
+    # 3 ways
+    # 1 -> transaction -> two phase commit
+    # 2 -> exception -> part recored
+    # 3 -> rettry ->
+
+
+
     # Writing modes: overwrite, append, ignore, errorIfExists
     # applicable to all file formats
 
