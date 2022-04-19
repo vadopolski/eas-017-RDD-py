@@ -41,6 +41,8 @@ def demo_manual_schema():
         StructField("Year", StringType()),
     ])
 
+    #!!!!!!!!!!! Very Important Warning Long Type vs IntType
+
     # reading a DF with a manual schema
     cars_df = spark.read. \
         format("json"). \

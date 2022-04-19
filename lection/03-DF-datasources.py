@@ -1,14 +1,20 @@
 from pyspark.sql import SparkSession
+from pyspark.sql.functions import col
 from pyspark.sql.types import *
+from pyspark.sql import functions as F
 
 spark = SparkSession. \
     builder. \
     appName("Data Sources"). \
     master("local"). \
     config("spark.jars", "../jars/postgresql-42.2.19.jar"). \
-    config("spark.sql.legacy.timeParserPolicy", "LEGACY"). \
     getOrCreate()
 
+# config("spark.python.worker.memory", "8g"). \
+#     config("spark.driver.memory", "8g"). \
+#     config("spark.executor.memory", "8g"). \
+#  \
+    # spark.conf.set("spark.sql.shuffle.partitions", 14)
 
 def file_system_HDFS_S3_FTP():
     # read a DF in json format
@@ -28,12 +34,12 @@ def file_system_HDFS_S3_FTP():
     # S3
     # option("path", s3://bucket-name/sources/cars)
 
-    cars_df.show()
+    # cars_df.show()
 
-    cars_df_v2 = spark.read. \
-        format("json"). \
-        options(mode="failFast", path="../sources/cars", inferSchema="true"). \
-        load()
+    # cars_df_v2 = spark.read. \
+    #     format("json"). \
+    #     options(mode="failFast", path="../sources/cars", inferSchema="true"). \
+    #     load()
              # /sources/cars
     # 10.1.1.1 node1 -> block1     S3 NETWORK                             -> partition1 -> task1
     # 10.1.1.2 node2 -> block2 -> Spark Driver -> Name Node -> ip adress -> partition2 -> task2
@@ -42,22 +48,41 @@ def file_system_HDFS_S3_FTP():
     #
 
 
-    cars_df.\
-        repartition(3). \
-        write. \
-        format("json"). \
-        mode("overwrite"). \
-        option("path", "../sources/cars_dupe"). \
-        save()
+    # cars_df.\
+    #     repartition(3). \
+    #     write. \
+    #     mode("overwrite"). \
+    #     option("compression", "snappy"). \
+    #     parquet("../sources/parquet"). \
+    #     save()
 
+
+    # spark.sql("create schema example")
+    #
+    # cars_df.\
+    #     write. \
+    #     saveAsTable("example.cars_table")
+    #
+    # data_frame = spark.sql("select * from example.cars_table")
+
+    # cars_df. \
+    #     repartition(cars_df.Year). \
+    #     groupBy(cars_df.Year). \
+    #     write. \
+    #     partitionBy(cars_df.Year). \
+    #     json("../sources/json"). \
+    #     save()
+
+
+    # spark.sql("drop table example.cars_table")
+
+    # data_frame.show()
 
     # OZU           HDFS data node
     # partition1 -> block1 -> node1 v
     # partition2 -> block2 -> node2 v
     # partition3 -> block3 -> node3 -> error
     # spark.yarn.max.executor.failures
-
-
 
     # 3 ways
     # 1 -> transaction -> two phase commit
@@ -91,7 +116,7 @@ def file_system_HDFS_S3_FTP():
         option("dateFormat", "YYYY-MM-dd"). \
         option("allowSingleQuotes", "true"). \
         option("compression", "uncompressed"). \
-        json("../data/cars")  # equivalent to .format(...).option("path",...).load()
+        json("../sources/cars")  # equivalent to .format(...).option("path",...).load()
 
     stocks_schema = StructType([
         StructField("company", StringType()),
@@ -106,17 +131,38 @@ def file_system_HDFS_S3_FTP():
         option("header", "false"). \
         option("sep", ","). \
         option("nullValue", ""). \
-        csv("../data/stocks")  # same as .option("path", "...").format("csv").load()
+        csv("../sources/stocks")  # same as .option("path", "...").format("csv").load()
+
+
+    # cars_df.\
+    #     select(col("Year")).\
+    #     distinct().\
+    #     show()
+
+    # How to work map reduce with sorting
+    # grouped_cars_df = cars_df.sort(col("Year"))
+
+    grouped_cars_df2 = cars_df.repartition(col("Year"))
+
+    grouped_cars_df3 = cars_df.repartition(4)
+
+
+    grouped_cars_df3.\
+        write. \
+        partitionBy("Year"). \
+        mode("overwrite"). \
+        json("../sources/json")
+
 
     # Parquet = binary data, high compression, low CPU usage, very fast
     # also contains the schema
     # the default data format in Spark
 
-    stocks_df.write.save("../data/stocks_parquet")
+    # stocks_df.write.save("../sources/stocks_parquet")
 
     # each row is a value in a DF with a SINGLE column ("value")
-    text_df = spark.read.text("../data/lipsum")
-    text_df.show()
+    # text_df = spark.read.text("../data/lipsum")
+    # text_df.show()
 
     # !!!!!!!!!!!!! DIFFERENCE between saveAsTable() and write
 
@@ -139,12 +185,36 @@ def data_formats_json_avro_parquet():
 
 # reading data from external JDBC (Postgres)
 driver = "org.postgresql.Driver"
-url = "jdbc:postgresql://localhost:5432/eas017"
+url = "jdbc:postgresql://localhost:5432/spark"
 user = "docker"
 password = "docker"
 
 
 def jdbc_postgres_oracle():
+    DBPARAMS = {
+        "user": user,
+        "password": password,
+        "driver": driver
+    }
+
+    df = spark.read.jdbc(url=url, table="public.employees", properties=DBPARAMS)
+    # df = spark.read.jdbc(url=url, table="public.employees", properties=DBPARAMS, lowerBound = 10010, upperBound = 499990, numPartitions = 10, column="emp_no")
+
+    # lowerBound = 10010,
+    # upperBound = 499990,
+    # numPartitions = 20,
+
+    df.printSchema()
+    df.agg(F.max(F.col("emp_no")), F.min(F.col("emp_no"))).show()
+
+
+    print("GET NUM PARTITIONS")
+    print(df.rdd.getNumPartitions())
+
+    df.show()
+
+
+
     employees_df = spark.read. \
         format("jdbc"). \
         option("driver", driver). \
@@ -153,6 +223,10 @@ def jdbc_postgres_oracle():
         option("password", password). \
         option("dbtable", "public.employees"). \
         load()
+
+    print("GET NUM PARTITIONS")
+    print(employees_df.rdd.getNumPartitions())
+
 
     employees_df.show()
 # DB/2 connector
@@ -184,4 +258,4 @@ def queue_kafka():
     """
 
 if __name__ == '__main__':
-    file_system_HDFS_S3_FTP()
+    jdbc_postgres_oracle()
