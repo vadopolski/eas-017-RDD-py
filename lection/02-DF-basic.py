@@ -34,7 +34,7 @@ def demo_manual_schema():
         StructField("Acceleration", DoubleType()),
         StructField("Cylinders", LongType()),
         StructField("Displacement", DoubleType()),
-        StructField("Horsepower", LongType()),
+        StructField("Horsepower", IntegerType()),
         StructField("Miles_per_Gallon", DoubleType()),
         StructField("Origin", StringType()),
         StructField("Weight_in_lbs", LongType()),
@@ -49,7 +49,7 @@ def demo_manual_schema():
         schema(cars_schema). \
         load("../sources/cars")
 
-    # cars_df.show()
+    cars_df.show()
 
     # Data Frame comparing
 
@@ -87,11 +87,11 @@ def demo_manual_schema():
         withColumn("new", expr("Acceleration + 10")). \
         sort(cars_df.Horsepower.desc(), cars_df.Acceleration.asc())
 
-    most_powered_df.explain(True)
+    # most_powered_df.explain(True)
 
-    most_powered_df.show()
+    # most_powered_df.show()
 
-    most_powered_df.queryExecution().debug().codegen()
+    # most_powered_df.queryExecution().debug().codegen()
 
 
 

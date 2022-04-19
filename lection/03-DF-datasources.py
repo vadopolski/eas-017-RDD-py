@@ -198,7 +198,12 @@ def jdbc_postgres_oracle():
     }
 
     df = spark.read.jdbc(url=url, table="public.employees", properties=DBPARAMS)
-    # df = spark.read.jdbc(url=url, table="public.employees", properties=DBPARAMS, lowerBound = 10010, upperBound = 499990, numPartitions = 10, column="emp_no")
+    # df = spark.read.jdbc(url=url, table="public.employees", properties=DBPARAMS, lowerBound = 10010,
+    #                      upperBound = 499990, numPartitions = 10, column="emp_no")
+
+    # df = spark.read.jdbc(url=url, table="public.employees", properties=DBPARAMS, predicates = ["gender = 'F'", "gender = 'M'"])
+    df.show()
+
 
     # lowerBound = 10010,
     # upperBound = 499990,
@@ -206,7 +211,7 @@ def jdbc_postgres_oracle():
 
     df.printSchema()
     df.agg(F.max(F.col("emp_no")), F.min(F.col("emp_no"))).show()
-
+    # Killer joins => optimised UDF
 
     print("GET NUM PARTITIONS")
     print(df.rdd.getNumPartitions())
@@ -258,4 +263,4 @@ def queue_kafka():
     """
 
 if __name__ == '__main__':
-    jdbc_postgres_oracle()
+    file_system_HDFS_S3_FTP()
