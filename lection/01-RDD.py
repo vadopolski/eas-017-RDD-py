@@ -272,6 +272,24 @@ def other_operations():
     #   println("== Value")
     #   codeRows.values.collect().foreach(println)
 
+    """
+    Exercises
+        1. Read the movies dataset as an RDD    
+        2. Show the distinct genres as an RDD
+        3. Print all the movies in the Drama genre with IMDB rating > 6
+    """
+    df = spark.read.csv("../sources/movies")
+    movies_rdd = df.rdd
+
+    dist_movies = movies_rdd.map(lambda row: row.Major_Genre).distinct()
+    print(dist_movies)
+
+    # spark_dsl_only_df = col("Major_Genre") == "Drama" && col("IMDB_Rating") > 6
+    python_lambda_rdd = lambda movie: movie.Major_Genre & movie.IMDB_Rating > 6
+
+    s_movies = movies_rdd.filter(python_lambda_rdd)
+    print(s_movies)
+
 
 
 if __name__ == '__main__':

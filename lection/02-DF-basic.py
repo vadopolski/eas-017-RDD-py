@@ -1,7 +1,7 @@
 from time import sleep
 
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import expr
+from pyspark.sql.functions import expr, col
 from pyspark.sql.types import *
 
 spark = SparkSession. \
@@ -49,8 +49,9 @@ def demo_manual_schema():
         schema(cars_schema). \
         load("../sources/cars")
 
-    cars_df.show()
+    cars_df.filter(col("test") > 7)
 
+    cars_df.show()
     # Data Frame comparing
 
     # most_powered_df.explain(True)

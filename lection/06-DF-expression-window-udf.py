@@ -13,10 +13,7 @@ spark = SparkSession. \
 def window_functions():
     windowSpec = Window.partitionBy("department").orderBy(col("salary").desc)
 
-    # employeeDF\
-    # .withColumn("rank", rank().over(windowSpec))
-    # .withColumn("rank", dense_rank().over(windowSpec))
-    # .show()
+    employeeDF.withColumn("rank", rank().over(windowSpec)).withColumn("rank", dense_rank().over(windowSpec)).show()
 
     # !!!!!!!!!!! DANGER CASES
     # !!!!!!!!!!! Single Partition
