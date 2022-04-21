@@ -18,27 +18,54 @@ def window_functions():
 
     employeeDF = spark.createDataFrame(simpleData).toDF("employee_name", "department", "salary")
 
-    employeeDF.show()
+    # employeeDF.show()
 
     employeeDF.createOrReplaceTempView("employee")
 
-    result_sql_df = spark.sql("select employee_name, department, salary, dense_rank() OVER (ORDER BY salary DESC) as rank from employee")
-    result_sql_df.explain()
+    result_sql_df = spark.sql("""select distinct salary from (
+                                    select 
+                                        employee_name, 
+                                        department, 
+                                        salary, 
+                                        row_number() OVER (ORDER BY salary DESC) as row_num 
+                                  from employee) where dense_rank = 2""")
+
+    #                                         dense_rank() OVER (ORDER BY salary DESC) as dense_rank,
+    #                                         rank() OVER (ORDER BY salary DESC) as rank,
+    print("Experiment")
     result_sql_df.show()
+
+    result_sql_df2 = spark.sql("""
+            select max(salary) 
+                from employee 
+            where salary != (select max(salary) from employee)""")
+    # result_sql_df2.explain()
+    # result_sql_df2.show()
 
     # windowSpec = Window.partitionBy("department").orderBy(F.col("salary").desc())
     windowSpec = Window.orderBy(F.col("salary").desc())
     result_with_rank_df = employeeDF.\
         withColumn("rank", F.rank().over(windowSpec)).\
         withColumn("dense_rank", F.dense_rank().over(windowSpec))
-    result_with_rank_df.explain()
-    result_with_rank_df.show()
+    # result_with_rank_df.explain()
+    # result_with_rank_df.show()
 
 
-    single_part_df_1 = employeeDF.\
-        withColumn("count", F.count().over(windowSpec))
+    result_sql_df = spark.sql("""
+                                        select 
+                                            employee_name, 
+                                            department, 
+                                            salary, 
+                                            count(*) OVER () as cnt
+                                        from employee
+    """)
+
+
+    # single_part_df_1 = employeeDF.\
+    #     withColumn("count", count().over(windowSpec))
     print("DON'T ADD COUNT")
-    single_part_df_1.show()
+    result_sql_df.show()
+    result_sql_df.explain()
 
     # cnt = employeeDF.count()
     result_with_count_df = employeeDF.\
@@ -52,7 +79,7 @@ def window_functions():
         withColumn("row_num", F.row_number().over(windowSpec))
     print("DON'T ADD ROW NUM")
     single_part_df_2.show()
-    result_with_count_df.explain()
+    single_part_df_2.explain()
 
     result_with_uniq_num = employeeDF.\
         withColumn("row_num", F.monotonically_increasing_id())
@@ -62,13 +89,16 @@ def window_functions():
 
 
 
+# UDF, UDAF
 def user_define_functions():
     # Step-1: Define and register UDF function
 
-    lambda_is_world_war_two_year = lambda year: year >= 1939 & year <= 1945
+    lambda_is_world_war_two_year = lambda year: 1939 <= year <= 1945
 
+    # 1 way
     is_world_war_two_year = udf(lambda_is_world_war_two_year)
 
+    # 2 way
     spark.udf.register("isWorldWarTwoYear", lambda_is_world_war_two_year)
 
     stateNames = spark.read.\
@@ -83,13 +113,17 @@ def user_define_functions():
         distinct().\
         show(150)
 
-    stateNames.select(F.col("Year"), is_world_war_two_year(F.col("Year"))).distinct().show(150)
+    stateNames.\
+        select(F.col("Year"), is_world_war_two_year(F.col("Year"))).\
+        distinct().\
+        show(150)
 
     stateNames.createOrReplaceTempView("stateNames")
 
     spark.sql(
-        "SELECT DISTINCT Name FROM stateNames WHERE Gender = 'M' and isWorldWarTwoYear(Year) ORDER BY Name DESC").show(150)
+        "SELECT DISTINCT Name, Year FROM stateNames WHERE Year IS NOT NULL AND isWorldWarTwoYear(Year) = true ORDER BY Name DESC").\
+        show(150)
 
 
 if __name__ == '__main__':
-    user_define_functions()
+    window_functions()

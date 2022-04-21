@@ -23,10 +23,12 @@ def demo_booleans():
     good_drama_filter = good_rating_filter & drama_filter
 
     # can use boolean column objects as arguments to filter
-    good_dramas_df = movies_df.filter(good_drama_filter).select("Title")
+    good_dramas_df = movies_df.filter(good_drama_filter).select("Title", "Major_Genre", "IMDB_Rating")
+    good_dramas_df.show()
 
     # can add the col object as a column/property for every row
-    movies_with_good_drama_condition_df = movies_df.select(col("Title"), good_drama_filter.alias("IsItAGoodDrama"))
+    movies_with_good_drama_condition_df = movies_df\
+        .select(col("Title"), good_drama_filter.alias("IsItAGoodDrama"))
     # can filter using the true/false value of a column
     good_dramas_df_v2 = movies_with_good_drama_condition_df.filter("IsItAGoodDrama")
 
@@ -37,7 +39,8 @@ def demo_booleans():
 
 
 def demo_numerical_ops():
-    movies_avg_ratings_df = movies_df.select(
+    movies_avg_ratings_df = movies_df\
+        .select(
         col("Title"),
         (col("Rotten_Tomatoes_Rating") / 10 + col("IMDB_Rating")) / 2
     )
@@ -53,7 +56,7 @@ def demo_numerical_ops():
 def demo_string_ops():
     movies_df.select(initcap(col("Title"))) # capitalize initials of every word in the string
     # upper(...), lower(...) to uppercase/lowercase
-    movies_df.filter(col("Title").contains("love"))
+    movies_df.filter(col("Title").contains("love")).show()
 
 
 cars_df = spark.read.json("../sources/cars")
@@ -94,7 +97,7 @@ cars_interest_df = cars_df.select(
 # v2 - contains
 from functools import reduce
 
-car_name_filters = [col("Name").contains(car_name.lower()) for car_name in get_car_names()]
+car_name_filters = [col("Name").contains(car_name.lower()) for car_name in ["Volkswagen", "Mercedes-Benz", "Ford"]]
 big_filter = reduce(lambda filter1, filter2: filter1 | filter2, car_name_filters)
 filtered_cars = cars_df.filter(big_filter)
 
@@ -121,25 +124,39 @@ def complex_type():
         withColumn("Actual_Date", coalesce(col("Date_F1"), col("Date_F2")))
 
     # structures
+    print("structures create")
     movies_struct_df = movies_df. \
-        select(col("Title"), struct(col("US_Gross"), col("Worldwide_Gross"), col("US_DVD_Sales")).alias("Profit")). \
-        select(col("Title"), col("Profit").getField("US_Gross").alias("US_Profit"))
+        select(col("Title"), struct(col("US_Gross"), col("Worldwide_Gross"), col("US_DVD_Sales")).alias("Profit"))
+    # movies_struct_df.show()
+
+    movies_struct_df. \
+        select(col("Title"), col("Profit").getField("US_Gross").alias("US_Profit")).\
+        show()
 
     # structures - SQL expression strings
     movies_struct_df_v2 = movies_df. \
         selectExpr("Title", "(US_Gross, Worldwide_Gross, US_DVD_Sales) as Profit"). \
         selectExpr("Title", "Profit.US_Gross as US_Profit")
+    # movies_struct_df_v2.show()
 
 
     # very nested data structures
     movies_struct_df_v3 = movies_df. \
         selectExpr("Title",
-                   "((IMDB_Rating, Rotten_Tomatoes_Rating) as Rating, (US_Gross, Worldwide_Gross, US_DVD_Sales) as Profit) as Success"). \
-        selectExpr("Title", "Success.Rating.IMDB_Rating as IMDB")
+                   "((IMDB_Rating, Rotten_Tomatoes_Rating) as Rating, (US_Gross, Worldwide_Gross, US_DVD_Sales) as Profit) as Success")
+    print("nested data structures")
+    # movies_struct_df_v3.show()
+
+    movies_struct_df_v3. \
+        selectExpr("Title", "Success.Rating.IMDB_Rating as IMDB").show()
     # movies_struct_df_v3.show()
 
     # arrays
-    movies_with_words_df = movies_df.select(col("Title"), split(col("Title"), " |,").alias("Title_Words"))
+    movies_with_words_df = movies_df.\
+        select(col("Title"),
+        split(col("Title"), " |,").alias("Title_Words"),
+        split(col("Director"), " |,").alias("Director_Words"))
+    movies_with_words_df.printSchema()
     movies_with_words_df.show()
     #                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^ col object of type ARRAY[String]
     # you can have nested arrays
@@ -152,6 +169,8 @@ def complex_type():
         array_contains(col("Title_Words"), "Love")
         # a bunch of array_(...) functions
     )
+
+    array_ops_df.show()
 
     array_ops_df = movies_with_words_df.select(
         col("Title"),
