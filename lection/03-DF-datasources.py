@@ -165,7 +165,7 @@ def file_system_HDFS_S3_FTP():
 
 
 
-    # grouped_cars_df2 = cars_df.repartition(col("Year"))
+    grouped_cars_df2 = cars_df.repartition(col("Year"))
     #                                                    1 ~ 200 =   1, 150, 13, 99, ....
     # |||||||||||||   - 1972-01-01 => hash  123123123123123 => long 200 partition_1 ~ task1 => ||| 1972-01-01 -> file1 folder1
     #                                                                   partition_2 ~ task2 =>
@@ -186,6 +186,8 @@ def file_system_HDFS_S3_FTP():
 
     grouped_cars_df.explain(True)
 
+    print("Num partitions")
+    print(grouped_cars_df.rdd.getNumPartitions())
 
     grouped_cars_df.\
         write. \
@@ -395,5 +397,5 @@ def queue_kafka():
     """
 
 if __name__ == '__main__':
-    queue_kafka()
+    file_system_HDFS_S3_FTP()
     sleep(100000)

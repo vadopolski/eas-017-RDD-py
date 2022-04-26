@@ -59,6 +59,10 @@ def df_exercise():
     # 3 Coalesce vs repartition
 
 
+    # 4 Join optimisation
+
+
+
 
 
 if __name__ == '__main__':
