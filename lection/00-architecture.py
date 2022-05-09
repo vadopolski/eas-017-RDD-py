@@ -4,31 +4,16 @@
 # 1 stage => many tasks
 
 
-# Spark UI
-
-
-    groups = cachedInts.map { lambda x:
-            if x % 2 == 0
-                (0, x)
-            else
-                (1, x)
-    }
-
-print("== Group");
-print(groups.groupByKey().toDebugString)
-
-val
-array = groups.groupByKey().coalesce(3).collect()
-array.foreach(print)
-val
-intToLong: collection.Map[Int, Long] = groups.countByKey()
-print(intToLong.toString())
-
-print("== Actions")
-print("First elem is " + cachedInts.first())
-print("Count is " + cachedInts.count())
-print("Take(2)")
-
-cachedInts.take(2).foreach(print)
-print("Take ordered (5)")
-cachedInts.takeOrdered(5).foreach(print)
+# Spark
+# List of problems
+# - map reduce implementation - using memory or local FS instead HDFS
+# - fault tolerance in distributed mode
+# - how to scale spark cluster (slot, reducers, cores per reducers, max cores, dynamic allocation)
+# - how to debug, how to increase performance (local, cluster, client mode)
+# - how to get resource in cluster (kubernetus, yarn, mesos, standalone)
+# - how to get and put data from/into anywhere in paralllel mode
+# - how can Spark resolve 3 classic big data issues: word count, I/O in parallel, sorting data
+# - how to control distributed processing with Spark (Spark UI)
+# - how to choose streaming or batch
+# - how to restart Spark automatically
+# -
