@@ -31,7 +31,12 @@ def join_optimisation():
     grouped_crime_df.explain(True)
     grouped_crime_df.show()
 
-    offense_сodes = spark.read.option("header", "true").option("inferSchema", "true").csv("../sources/crimes/offense_codes.csv")
+    offense_сodes = spark.\
+        read.\
+        option("header", "true").\
+        option("inferSchema", "true").\
+        csv("../sources/crimes/offense_codes.csv")
+
     offense_сodes.show(100, False)
 
     print("Sort Merge Join")

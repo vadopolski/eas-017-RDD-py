@@ -16,4 +16,10 @@
 # - how to control distributed processing with Spark (Spark UI)
 # - how to choose streaming or batch
 # - how to restart Spark automatically
-# -
+
+
+# executors_num
+# memory_per_ex
+# cores_per_execute
+# s = executors_num * cores_per_execut = 400 slotes
+#  20 block => 20 slotes ~ 95%

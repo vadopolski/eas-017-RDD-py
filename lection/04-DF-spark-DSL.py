@@ -10,118 +10,135 @@ spark = SparkSession. \
     appName("Data Sources"). \
     master("local"). \
     config("spark.jars", "../jars/postgresql-42.2.19.jar"). \
-    config("spark.sql.legacy.timeParserPolicy", "LEGACY"). \
     config("spark.sql.autoBroadcastJoinThreshold", -1). \
+    config("spark.sql.legacy.timeParserPolicy", "LEGACY"). \
     getOrCreate()
+
+
+spark.conf.set("spark.sql.shuffle.partitions", 14)
 
 movies_df = spark.read.json("../sources/movies")
 
-
-# def aggregations():
+def aggregations():
     # counting
-    # all_movies_count_df = movies_df.selectExpr("count(Major_Genre)")
-    # print("SIMPLE COUNT")
+    all_movies_count_df = \
+        movies_df\
+            .selectExpr("count(Major_Genre)")
+    print("SIMPLE COUNT")
     # all_movies_count_df.show()
     # all_movies_count_df.explain()
 
-    #  null not included
-    # genres_count_df = movies_df.select(count(col("Major_Genre")))
-    # print("SIMPLE COUNT Genre")
+     # null not included
+    genres_count_df = \
+        movies_df\
+            .select(count(col("Major_Genre")))
+    print("SIMPLE COUNT Genre")
     # genres_count_df.show()
     # genres_count_df.explain()
 
-    # genres_count_df_v2 = movies_df.selectExpr("count(*)")
-    # print("SIMPLE COUNT Genre Expr")
+    # null not included
+    genres_count_df_v2 = movies_df\
+        .selectExpr("count(*)")
+    print("SIMPLE COUNT Genre Expr")
     # genres_count_df_v2.show()
 
-    #  null included
-    # genres_count_number = movies_df.select("Major_Genre").count()
-    # print("SIMPLE COUNT Genre wit select")
+     # null included
+    genres_count_number = movies_df\
+        .select("Major_Genre")\
+        .count()
+    print("SIMPLE COUNT Genre wit select")
     # print(genres_count_number)
 
     # count distinct NOT WORKING
-    # unique_genres_df = movies_df.select(F.countDistinct(F.col("Major_Genre")))
-    # print("COUNT DISTINCT Genre wit select")
+    unique_genres_df = movies_df\
+        .select(F.countDistinct(F.col("Major_Genre")))
+    print("COUNT DISTINCT Genre wit select")
     # print(unique_genres_df)
 
-    # unique_genres_df_v2 = movies_df.selectExpr("count(DISTINCT Major_Genre)")
-    # print("COUNT DISTINCT Genre with Expression")
+    unique_genres_df_v2 = movies_df\
+        .selectExpr("count(DISTINCT Major_Genre)")
+    print("COUNT DISTINCT Genre with Expression")
     # unique_genres_df_v2.show()
-    #
-    # # math aggregations
-    # # min/max
-    # max_rating_df = movies_df.select(max(col("IMDB_Rating")).alias("max value of IMDB Rating"))
-    # print("max IMDB_Rating with functions")
+
+    # math aggregations
+    # min/max
+    max_rating_df = movies_df \
+        .select(max(col("IMDB_Rating")).alias("max value of IMDB Rating"))
+    print("max IMDB_Rating with functions")
     # max_rating_df.show()
-    #
-    # max_rating_df_v2 = movies_df.selectExpr("min(IMDB_Rating)").alias("mix value of IMDB Rating")
-    # print("max IMDB_Rating with Expression")
+
+    max_rating_df_v2 = movies_df \
+        .selectExpr("min(IMDB_Rating)").alias("mix value of IMDB Rating")
+    print("max IMDB_Rating with Expression")
     # max_rating_df_v2.show()
 
     # sum values in a column
-    # us_industry_total_df = movies_df.select(sum(col("US_Gross")))
-    # print("sum US_Gross")
-    # us_industry_total_df.show()
-    #
-    #
-    # us_industry_total_df_v2 = movies_df.selectExpr("sum(US_Gross)")
-    # print("sum US_Gross Expr")
-    # us_industry_total_df_v2.show()
-    #
-    # # avg
-    # avg_rt_rating_df = movies_df.select(avg(col("Rotten_Tomatoes_Rating")))
-    # print("avg Rotten_Tomatoes_Rating")
-    # avg_rt_rating_df.show()
+    us_industry_total_df = movies_df\
+        .select(sum(col("US_Gross")))
+    print("sum US_Gross")
+    us_industry_total_df.show()
 
+    us_industry_total_df_v2 = movies_df\
+        .selectExpr("sum(US_Gross)")
+    print("sum US_Gross Expr")
+    us_industry_total_df_v2.show()
 
+    # avg
+    avg_rt_rating_df = movies_df.select(avg(col("Rotten_Tomatoes_Rating")))
+    print("avg Rotten_Tomatoes_Rating")
+    avg_rt_rating_df.show()
 
     # mean/standard dev
-    # rt_stats_df = movies_df.agg(
-    #     mean(col("Rotten_Tomatoes_Rating")),
-    #     stddev(col("Rotten_Tomatoes_Rating"))
-    # )
+    rt_stats_df = movies_df.agg(
+        mean(col("Rotten_Tomatoes_Rating")),
+        stddev(col("Rotten_Tomatoes_Rating"))
+    )
     # print("mean/standard dev")
     # rt_stats_df.show()
-    #
-    # # Grouping
-    # # nulls are also considered
-    # count_by_genre_df = movies_df. \
-    #     groupBy(col("Major_Genre")). \
-    #     count()
-    # print("count group by dev")
-    # count_by_genre_df.show()
-    # count_by_genre_df.explain()
-    #
-    # avg_rating_by_genre_df = movies_df. \
-    #     groupBy(col("Major_Genre")). \
-    #     avg("IMDB_Rating")
-    # print("count group by dev")
-    # count_by_genre_df.show()
-    # avg_rating_by_genre_df.show()
-    # avg_rating_by_genre_df.explain()
-    #
-    #
-    # # multiple aggregations
-    # aggregations_by_genre_df = movies_df. \
-    #     groupBy(col("Major_Genre")). \
-    #     agg(
-    #     # use strings here for column names
-    #     count("*").alias("N_Movies"),
-    #     avg("IMDB_Rating").alias("Avg_Rating")
-    # )
-    # aggregations_by_genre_df.show()
+
+
+def grouping():
+    # Grouping
+    # nulls are also considered
+    count_by_genre_df = movies_df. \
+        groupBy(col("Major_Genre")). \
+        count()
+    print("count group by dev")
+    count_by_genre_df.show()
+    count_by_genre_df.explain()
+
+    avg_rating_by_genre_df = movies_df. \
+        groupBy(col("Major_Genre")). \
+        avg("IMDB_Rating")
+    print("count group by dev")
+    avg_rating_by_genre_df.show()
+    avg_rating_by_genre_df.explain()
+
+
+    # multiple aggregations
+    aggregations_by_genre_df = movies_df. \
+        groupBy(col("Major_Genre")). \
+        agg(
+        # use strings here for column names
+        count("*").alias("N_Movies"),
+        avg("IMDB_Rating").alias("Avg_Rating")
+    )
+    aggregations_by_genre_df.show()
 
 
     # sorting
-    # best_movies_df = movies_df.orderBy(col("IMDB_Rating").desc())
-    # best_movies_df.show()
-    # best_movies_df.explain()
-    #
-    # # sorting works for numerical, strings (lexicographic), dates
-    #
-    # # put nulls first or last
-    # proper_worst_movies_df = movies_df.orderBy(col("IMDB_Rating").asc_nulls_last())
-    # proper_worst_movies_df.show()
+    best_movies_df = movies_df.\
+        orderBy(col("IMDB_Rating").desc())
+    best_movies_df.show()
+    best_movies_df.explain()
+
+    # sorting works for numerical, strings (lexicographic), dates
+
+    # put nulls first or last
+    proper_worst_movies_df = movies_df.orderBy(col("IMDB_Rating").asc_nulls_last())
+    proper_worst_movies_df.show()
+
+
 
 """
     Exercises
@@ -142,7 +159,20 @@ bands_df = spark.read.json("../sources/bands")
 def joins():
     # inner joins = all rows from the "left" and "right" DF for which the condition is true
     join_condition = guitar_players_df.band == bands_df.id
-    guitarists_bands_df = guitar_players_df.join(bands_df, join_condition, "inner")
+
+    guitarists_bands_df = guitar_players_df \
+        .join(bands_df, join_condition, "inner") \
+        .filter(guitar_players_df.band.isNull()) \
+        .filter(guitar_players_df.name.isNull()) \
+        .filter(guitar_players_df.id.isNull()) \
+
+
+    guitarists_bands_df.explain(True)
+    guitarists_bands_df.show()
+
+
+
+
     #                     ^^ "left" DF            ^^ "right" DF
     # guitarists_bands_df.show()
 
@@ -169,13 +199,16 @@ def joins():
 
 
     # left outer = everything in the inner join + all the rows in the LEFT DF that were not matched (with nulls in the cols for the right DF)
-    guitar_players_df.join(bands_df, join_condition, "left_outer")
+    guitar_players_df.\
+        join(bands_df, join_condition, "left_outer")
 
     # right outer = everything in the inner join + all the rows in the RIGHT DF that were not matched (with nulls in the cols for the left DF)
-    guitar_players_df.join(bands_df, join_condition, "right_outer")
+    guitar_players_df.\
+        join(bands_df, join_condition, "right_outer")
 
     # full outer join = everythin in the inner join + all the rows in BOTH DFs that were not matched (with nulls in the other DF's cols)
-    guitar_players_df.join(bands_df, join_condition, "outer")
+    guitar_players_df.\
+        join(bands_df, join_condition, "outer")
 
     # join on a single column
     # guitar_players_df.join(bands_df, "id")
@@ -183,10 +216,20 @@ def joins():
     # left semi joins = everything in the LEFT DF for which there is a row in the right DF for which the condition is true
     # more like a filter
     # equivalent SQL: select * from guitar_players WHERE EXISTS (...)
-    guitar_players_df.join(bands_df, join_condition, "left_semi")
+    guitar_players_df.\
+        join(bands_df, join_condition, "left_semi")
+
 
     # left anti joins = everything in the LEFT DF for which there is __NO__ row in the right DF for which the condition is true
-    guitar_players_df.join(bands_df, join_condition, "left_anti")
+
+    join_condition = guitar_players_df.band == bands_df.id
+    joined_df = guitar_players_df.\
+        join(bands_df, join_condition, "left_anti")
+
+    joined_df.\
+        show()
+    joined_df.\
+        explain()
 
 
 driver = "org.postgresql.Driver"

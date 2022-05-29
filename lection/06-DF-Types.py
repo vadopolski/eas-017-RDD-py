@@ -7,6 +7,7 @@ spark = SparkSession. \
     appName("Joins"). \
     master("local"). \
     config("spark.jars", "../jars/postgresql-42.2.19.jar"). \
+    config("spark.sql.legacy.timeParserPolicy", "LEGACY"). \
     getOrCreate()
 
 movies_df = spark.read.json("../sources/movies")
@@ -17,34 +18,50 @@ def demo_literal_values():
     meaning_of_life_df.show()
 
 def demo_booleans():
-    drama_filter = movies_df.Major_Genre == "Drama" # column object of TYPE boolean
+    drama_filter = movies_df.Major_Genre == "Drama"
     good_rating_filter = movies_df.IMDB_Rating > 7.0
-    # can use & (and), | (or), ~ (not)
-    good_drama_filter = good_rating_filter & drama_filter
+    good_drama_filter = good_rating_filter & drama_filter # & (and), | (or), ~ (not)
 
-    # can use boolean column objects as arguments to filter
-    good_dramas_df = movies_df.filter(good_drama_filter).select("Title", "Major_Genre", "IMDB_Rating")
-    good_dramas_df.show()
+    good_dramas_df = movies_df.\
+        filter(good_drama_filter).\
+        select("Title", "Major_Genre", "IMDB_Rating")
+
+    # good_dramas_df.show()
 
     # can add the col object as a column/property for every row
     movies_with_good_drama_condition_df = movies_df\
         .select(col("Title"), good_drama_filter.alias("IsItAGoodDrama"))
-    # can filter using the true/false value of a column
-    good_dramas_df_v2 = movies_with_good_drama_condition_df.filter("IsItAGoodDrama")
+    # movies_with_good_drama_condition_df.show()
 
-    # negation
-    bad_drama_filter = ~good_drama_filter
+    # can filter using the true/false value of a column
+    good_dramas_df_v2 = movies_with_good_drama_condition_df\
+        .filter("IsItAGoodDrama")
+
+    # good_dramas_df_v2.show()
+
+    drama_filter = movies_df.Major_Genre == "Drama"
+    good_rating_filter = movies_df.IMDB_Rating > 7.0
+
+    bad_drama_filter = ~(good_rating_filter & drama_filter)
     bad_dramas = movies_df.select(col("Title"), bad_drama_filter)
     bad_dramas.show()
 
 
 def demo_numerical_ops():
-    movies_avg_ratings_df = movies_df\
+    movies_df\
         .select(
         col("Title"),
         (col("Rotten_Tomatoes_Rating") / 10 + col("IMDB_Rating")) / 2
-    )
+    ).show()
+
+
     # can use ==, >=, >, <, <= to obtain boolean col objects
+    movies_df\
+        .select(
+        col("Title"),
+        (col("Rotten_Tomatoes_Rating") == col("IMDB_Rating"))
+    ).show()
+
 
 
     # Pearson correlation - for numerical fields
@@ -54,26 +71,28 @@ def demo_numerical_ops():
     print(rating_correlation)
 
 def demo_string_ops():
-    movies_df.select(initcap(col("Title"))) # capitalize initials of every word in the string
+    movies_df.select(initcap(col("Title"))).show(10, False) # capitalize initials of every word in the string
     # upper(...), lower(...) to uppercase/lowercase
     movies_df.filter(col("Title").contains("love")).show()
 
 
 cars_df = spark.read.json("../sources/cars")
 def demo_regexes():
-    regexString = "volkswagen|vw"
-    vw_df = cars_df.select(
-        col("Name"),
-        regexp_extract(col("Name"), regexString, 0).alias("regex_extract")
-    ).filter(col("regex_extract") != "")
+    regex_string = "volkswagen|vw"
+    vw_df = cars_df\
+        .select(
+            col("Name"),
+            regexp_extract(col("Name"), regex_string, 0).alias("regex_extract"))\
+        .filter(col("regex_extract") != "")
 
     vw_df.show()
 
+    regex_string = "volkswagen|vw"
     vw_new_name_df = vw_df.select(
         col("Name"),
-        regexp_replace(col("Name"), regexString, "Volkswagen").alias("replacement")
+        regexp_replace(col("Name"), regex_string, "Volkswagen").alias("replacement")
     )
-    vw_new_name_df.show()
+    vw_new_name_df.show(20, False)
 
 """
 Exercise
@@ -103,41 +122,21 @@ filtered_cars = cars_df.filter(big_filter)
 
 
 def complex_type():
-    movies_with_release_dates_df = movies_df.select(
-        col("Title"),
-        to_date(col("Release_Date"), "dd-MMM-YY").alias("Actual_Release")
-    )
-
-    # date operations
-    enriched_movies_df = movies_with_release_dates_df. \
-        withColumn("Today", current_date()). \
-        withColumn("Right_Now", current_timestamp()). \
-        withColumn("Movie_Age", datediff(col("Today"), col("Actual_Release")) / 365)
-
-    # check for empty date
-    no_release_known_df = movies_with_release_dates_df.filter(col("Actual_Release").isNull())
-
-    # hypothetical
-    movies_with_2_formats = movies_df.select(col("Title"), col("Release_Date")). \
-        withColumn("Date_F1", to_date(col("Release_Date"), "dd-MM-yyyy")). \
-        withColumn("Date_F2", to_date(col("Release_Date"), "yyyy-MM-dd")). \
-        withColumn("Actual_Date", coalesce(col("Date_F1"), col("Date_F2")))
-
     # structures
     print("structures create")
     movies_struct_df = movies_df. \
         select(col("Title"), struct(col("US_Gross"), col("Worldwide_Gross"), col("US_DVD_Sales")).alias("Profit"))
-    # movies_struct_df.show()
+    movies_struct_df.show(10, False)
 
     movies_struct_df. \
         select(col("Title"), col("Profit").getField("US_Gross").alias("US_Profit")).\
-        show()
+        show(10, False)
 
     # structures - SQL expression strings
     movies_struct_df_v2 = movies_df. \
         selectExpr("Title", "(US_Gross, Worldwide_Gross, US_DVD_Sales) as Profit"). \
         selectExpr("Title", "Profit.US_Gross as US_Profit")
-    # movies_struct_df_v2.show()
+    movies_struct_df_v2.show(10, False)
 
 
     # very nested data structures
@@ -145,11 +144,10 @@ def complex_type():
         selectExpr("Title",
                    "((IMDB_Rating, Rotten_Tomatoes_Rating) as Rating, (US_Gross, Worldwide_Gross, US_DVD_Sales) as Profit) as Success")
     print("nested data structures")
-    # movies_struct_df_v3.show()
+    movies_struct_df_v3.show(10, False)
 
     movies_struct_df_v3. \
-        selectExpr("Title", "Success.Rating.IMDB_Rating as IMDB").show()
-    # movies_struct_df_v3.show()
+        selectExpr("Title", "Success.Rating.IMDB_Rating as IMDB").show(10, False)
 
     # arrays
     movies_with_words_df = movies_df.\
@@ -157,8 +155,8 @@ def complex_type():
         split(col("Title"), " |,").alias("Title_Words"),
         split(col("Director"), " |,").alias("Director_Words"))
     movies_with_words_df.printSchema()
-    movies_with_words_df.show()
-    #                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^ col object of type ARRAY[String]
+    movies_with_words_df.show(10, False)
+    # ^^^^^^^^^^^^^^^^^^^^^^^^^ col object of type ARRAY[String]
     # you can have nested arrays
 
     # array operations
@@ -174,14 +172,52 @@ def complex_type():
 
     array_ops_df = movies_with_words_df.select(
         col("Title"),
-        explode(col("Title_Words"))
+        explode(col("Title_Words")).alias("Flat")
     )
 
-    array_ops_df.show()
+    array_ops_df.show(20, False)
 
+
+def exercise():
+    test = spark.read.json("../sources/input")
+    test.printSchema()
+    test.show()
+
+
+def date_type():
+    # string to type
+    movies_with_release_dates_df = movies_df.select(
+        col("Title"),
+        to_date(col("Release_Date"), "dd-MMM-YY").alias("Actual_Release")
+    )
+
+    movies_with_release_dates_df.printSchema()
+    movies_with_release_dates_df.show(20, False)
+
+    # date operations
+    enriched_movies_df = movies_with_release_dates_df. \
+        withColumn("Today", current_date()). \
+        withColumn("Right_Now", current_timestamp()). \
+        withColumn("Movie_Age", datediff(col("Today"), col("Actual_Release")) / 365)
+
+    enriched_movies_df.show(10, False)
+
+    # check for empty date
+    no_release_known_df = movies_with_release_dates_df\
+        .filter(col("Actual_Release").isNull())
+    no_release_known_df.show(10, False)
+
+
+    # hypothetical
+    movies_with_2_formats = movies_df.select(col("Title"), col("Release_Date")). \
+        withColumn("Date_F1", to_date(col("Release_Date"), "dd-MM-yyyy")). \
+        withColumn("Date_F2", to_date(col("Release_Date"), "yyyy-MM-dd")). \
+        withColumn("Actual_Date", coalesce(col("Date_F1"), col("Date_F2")))
+
+    movies_with_2_formats.show(10, False)
 
 if __name__ == '__main__':
-    complex_type()
+    date_type()
 
 
 

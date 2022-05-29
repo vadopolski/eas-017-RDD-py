@@ -42,8 +42,11 @@ def rdd_creation():
 
     numbers = range(1, 1000000)
     numbers_parent_rdd = sc.parallelize(numbers, 4)
-    print(numbers_parent_rdd.take(10))
+    # print(numbers_parent_rdd.take(10))
+    numbers_parent_rdd.getNumPartitions()
 
+
+    # print(numbers_parent_rdd.toDebugString().decode("utf-8"))
 
     # RDD creations
     # def compute - process of reading data - work on executors - input Partition output Iterator
@@ -62,7 +65,7 @@ def rdd_creation():
 
     # Immutable
 
-    print(numbers_child_rdd.collect())
+    # print(numbers_child_rdd.collect())
 
     # P. How to read a file in parallel
     # P. How to use field name
@@ -70,7 +73,10 @@ def rdd_creation():
         map(lambda row: row.split(",")). \
         filter(lambda tokens: float(tokens[2]) > 15)
 
-    print(stocks_rdd_v2.collect())
+    # print(stocks_rdd_v2.collect())
+
+    # print(stocks_rdd_v2.toDebugString().decode("utf-8"))
+
 
     # P. How to get typed RDD
     # P. read from a DF
@@ -93,7 +99,7 @@ def rdd_creation():
     # condition: the RDD must contain Spark Rows (data structures conforming to a schema)
     stocks_df_v2 = spark.createDataFrame(stocks_rdd_v3)
     # P.
-    print(stocks_df_v2.collect())
+    # print(stocks_df_v2.collect())
 
     """
     Use cases for RDDs
@@ -112,14 +118,14 @@ def rdd_creation():
 
     # counting
     total_entries = stocks_rdd_v3.count()  # action - the RDD must be evaluated
-    total_entries
+    print(total_entries)
 
     # min and max
     aapl_stocks_rdd = stocks_rdd_v3 \
         .filter(lambda row: row.company == "AAPL") \
         .map(lambda row: float(row.price))
     max_aapl = aapl_stocks_rdd.max()
-    max_aapl
+    print(max_aapl)
 
     # reduce
     sum_prices = aapl_stocks_rdd \
@@ -131,6 +137,13 @@ def rdd_creation():
         .groupBy(lambda row: row.company)  # can use ANY grouping criterion as a Python function
     # grouping is expensive - involves a shuffle
     # print(grouped_stocks_rdd.collect())
+
+    for val in grouped_stocks_rdd.collect():
+        print(val)
+
+    for val in grouped_stocks_rdd.collect():
+        for el in val[1]:
+            print(el)
 
     # partitioning
     # How to change level of parallelism .repartition(30) vs .coalesce(2)
@@ -162,15 +175,15 @@ def group_join():
 
     # P. How to deduplicate data
     deduplicated = codeRows.reduceByKey(lambda x, y: x if (x > y) else y)
-    # for el in deduplicated.collect():
-    #     print(el)
+    for el in deduplicated.collect():
+        print(el)
 
     # P. How to get access to accamulator?
     # print()
-    # print("== Folded")
+    print("== Folded")
     folded = codeRows.foldByKey(1000, lambda x, y: x + y)
-    # for el in folded.collect():
-    #     print(el)
+    for el in folded.collect():
+        print(el)
 
     print()
     print("== Aggregated")
@@ -229,7 +242,12 @@ def group_join():
     print("== Cogroup")
     cogroup_result = programmerProfiles.cogroup(codeRows).sortByKey(False).collect()
     for el in cogroup_result:
-        print(el)
+        print(el[0])
+        for inner in el[1]:
+            print(list(inner))
+
+
+        # print(el[0])
 
     # # If required we can get amount of values by each key
     # print()
@@ -332,5 +350,5 @@ def rdd_saving():
 
 
 if __name__ == '__main__':
-    rdd_creation()
+    group_join()
     sleep(10000)

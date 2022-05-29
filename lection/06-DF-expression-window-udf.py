@@ -18,22 +18,22 @@ def window_functions():
 
     employeeDF = spark.createDataFrame(simpleData).toDF("employee_name", "department", "salary")
 
-    # employeeDF.show()
-
     employeeDF.createOrReplaceTempView("employee")
 
-    result_sql_df = spark.sql("""select distinct salary from (
-                                    select 
-                                        employee_name, 
-                                        department, 
-                                        salary, 
-                                        row_number() OVER (ORDER BY salary DESC) as row_num 
-                                  from employee) where dense_rank = 2""")
+    spark.sql("""select distinct salary from (
+                    select 
+                        employee_name, 
+                        department, 
+                        salary, 
+                        row_number() OVER (ORDER BY salary DESC) as row_num,
+                        dense_rank() OVER (ORDER BY salary DESC) as dense_rank,
+                        rank() OVER (ORDER BY salary DESC) as rank
+                  from employee) where dense_rank = 2""")
 
-    #                                         dense_rank() OVER (ORDER BY salary DESC) as dense_rank,
-    #                                         rank() OVER (ORDER BY salary DESC) as rank,
+    #
+    #
     print("Experiment")
-    result_sql_df.show()
+    # result_sql_df.show()
 
     result_sql_df2 = spark.sql("""
             select max(salary) 
@@ -42,13 +42,13 @@ def window_functions():
     # result_sql_df2.explain()
     # result_sql_df2.show()
 
-    # windowSpec = Window.partitionBy("department").orderBy(F.col("salary").desc())
-    windowSpec = Window.orderBy(F.col("salary").desc())
+    windowSpec = Window.partitionBy("department").orderBy(F.col("salary").desc())
+    # windowSpec = Window.orderBy(F.col("salary").desc())
     result_with_rank_df = employeeDF.\
         withColumn("rank", F.rank().over(windowSpec)).\
         withColumn("dense_rank", F.dense_rank().over(windowSpec))
-    # result_with_rank_df.explain()
-    # result_with_rank_df.show()
+    result_with_rank_df.explain()
+    result_with_rank_df.show()
 
 
     result_sql_df = spark.sql("""
@@ -61,20 +61,23 @@ def window_functions():
     """)
 
 
-    # single_part_df_1 = employeeDF.\
-    #     withColumn("count", count().over(windowSpec))
-    print("DON'T ADD COUNT")
+    result_sql_df.explain(True)
     result_sql_df.show()
-    result_sql_df.explain()
 
-    # cnt = employeeDF.count()
+    # single_part_df_1 = employeeDF. \
+    #     withColumn("count", count().over(windowSpec))
+    # print("DON'T ADD COUNT")
+    # result_sql_df.show()
+    # result_sql_df.explain()
+
+    cnt = employeeDF.count()
     result_with_count_df = employeeDF.\
         withColumn("count", F.lit(employeeDF.count()))
     print("CORRECT WAY")
     result_with_count_df.show()
     result_with_count_df.explain()
 
-
+    windowSpec = Window.orderBy(F.col("salary").desc())
     single_part_df_2 = employeeDF.\
         withColumn("row_num", F.row_number().over(windowSpec))
     print("DON'T ADD ROW NUM")
@@ -92,7 +95,6 @@ def window_functions():
 # UDF, UDAF
 def user_define_functions():
     # Step-1: Define and register UDF function
-
     lambda_is_world_war_two_year = lambda year: 1939 <= year <= 1945
 
     # 1 way
@@ -119,11 +121,13 @@ def user_define_functions():
         show(150)
 
     stateNames.createOrReplaceTempView("stateNames")
-
     spark.sql(
-        "SELECT DISTINCT Name, Year FROM stateNames WHERE Year IS NOT NULL AND isWorldWarTwoYear(Year) = true ORDER BY Name DESC").\
+        """SELECT DISTINCT Name, Year 
+            FROM stateNames 
+            WHERE Year IS NOT NULL AND isWorldWarTwoYear(Year) = true 
+            ORDER BY Name DESC""").\
         show(150)
 
 
 if __name__ == '__main__':
-    window_functions()
+    user_define_functions()

@@ -8,6 +8,7 @@ spark = SparkSession. \
     appName("Data Sources"). \
     master("local"). \
     config("spark.jars", "../jars/postgresql-42.2.19.jar"). \
+    config("spark.sql.warehouse.dir", "../sources/warehouse"). \
     config("spark.sql.legacy.timeParserPolicy", "LEGACY"). \
     getOrCreate()
 
@@ -19,19 +20,24 @@ def dml_ddl_expressions():
 
     assert(cars_df.count() != 0)
 
-    # american_cars_df = cars_df.\
-    #     filter(col("Origin") == "Japan").\
-    #     select(col("Name"))
+    american_cars_df = cars_df.\
+        filter(col("Origin") == "Japan").\
+        select(col("Name"))
     print("SPARK DSL DF API")
-    # american_cars_df.show()
+    american_cars_df.show(10, False)
 
     # store as a Spark table dont write data to storage EXTERNAL TABLE
     #  DataFrame => SQL metastore
     print("DataFrame => SQL metastore = EXTERNAL TABLE")
-    # cars_df.createOrReplaceTempView("cars")
-    
+    cars_df.createOrReplaceTempView("cars")
+
+    cars_df = spark.read.json("../sources/cars")
+    cars_df.createOrReplaceTempView("cars")
+    spark.sql("DROP TABLE cars")
+
     # run SQL queries on top of DFs known to Spark under a certain name
     # american_cars_df_v2 = spark.sql("SELECT Name FROM cars WHERE Origin = 'Japan'")
+    print("SPARK DSL DF API")
     # american_cars_df_v2.show()
 
     # DROPPING EXTERNAL TABLE DOES NOT DELETE DATA, ONLY IN METASTORE
@@ -39,12 +45,18 @@ def dml_ddl_expressions():
     # spark.sql("DROP TABLE cars")
     # spark.sql("SELECT Name FROM cars WHERE Origin = 'Japan'")
     # american_cars_df.show()
-    # cars_df_again = spark.read.json("../sources/cars")
-    # cars_df_again.show()
+    cars_df_again = spark.read.json("../sources/cars")
+    cars_df_again.show()
 
     # store DFs as Spark tables (files known to Spark) to Spark storage HDFS
     #  DataFrame => SQL metastore + Spark storage
     print("SAVING TO MANAGED TABLE")
+    cars_df.\
+        write.\
+        mode("overwrite").\
+        save("../sources/cars_parq")
+
+
     cars_df.\
         write.\
         mode("overwrite").\
@@ -61,13 +73,20 @@ def dml_ddl_expressions():
     print("READ FROM MANAGED STORAGE 2")
     cars_managed_df = spark.table("cars_managed_table")
     # cars_managed_df = spark.read.table("cars_managed_table")
+    print("MANAGED TABLE")
     assert (cars_managed_df.count() != 0)
     cars_managed_df.show()
 
     print("DROPPING MANGED TABLE")
     spark.sql("DROP TABLE cars_managed_table")
 
+    print("READING FROM MANAGED TABLE 2")
+    # cars_managed_df.show()
+    # spark.sql("SELECT * FROM cars_managed_table").show()
+
+def ddl_expressions():
     print("DDL DML INSIDE TABLE")
+
     spark.sql("CREATE SCHEMA test")
 
     spark.sql("CREATE TABLE test.students (name VARCHAR(64), address VARCHAR(64)) USING PARQUET PARTITIONED BY (student_id INT)")
@@ -77,7 +96,7 @@ def dml_ddl_expressions():
     ddl_demo_df = spark.sql("SELECT * FROM test.students")
     print("DDL_DEMO_DF TABLE")
     assert (ddl_demo_df.count() != 0)
-    ddl_demo_df.show()
+    ddl_demo_df.show(5, False)
 
     print("DROPPING MANGED TABLE")
     spark.sql("DROP TABLE test.students")
@@ -170,5 +189,5 @@ def what_will_happen():
 
 
 if __name__ == '__main__':
-    dml_ddl_expressions()
+    ddl_expressions()
     sleep(10000)

@@ -5,7 +5,7 @@ from pyspark.sql.functions import col, expr, from_json, date_format, to_timestam
 from pyspark.sql.types import *
 from pyspark.sql import functions as F
 import os
-os.environ['PYSPARK_SUBMIT_ARGS'] = '--packages org.apache.spark:spark-streaming-kafka-0-10_2.12:3.2.0,org.apache.spark:spark-sql-kafka-0-10_2.12:3.2.0 pyspark-shell'
+# os.environ['PYSPARK_SUBMIT_ARGS'] = '--packages org.apache.spark:spark-streaming-kafka-0-10_2.12:3.2.0,org.apache.spark:spark-sql-kafka-0-10_2.12:3.2.0 pyspark-shell'
 
 
 spark = SparkSession. \
@@ -16,12 +16,8 @@ spark = SparkSession. \
     getOrCreate()
 
 
-spark.conf.set("spark.sql.shuffle.partitions", 14)
+# spark.conf.set("spark.sql.shuffle.partitions", 14)
 
-# config("spark.python.worker.memory", "8g"). \
-#     config("spark.driver.memory", "8g"). \
-#     config("spark.executor.memory", "8g"). \
-#  \
 
 
 def file_system_HDFS_S3_FTP():
@@ -33,16 +29,16 @@ def file_system_HDFS_S3_FTP():
         option("path", "../sources/cars"). \
         load()
 
-    # HDFS
+    cars_df.show(10, False)
+
+    # # HDFS
     # option("path", "hdfs://nn1home:8020/sources/cars"). \
-
-    # FTP
+    #
+    # # FTP
     # option("path", "ftp://user:pwd/192.168.1.5/sources/cars"). \
-
-    # S3
-    # option("path", s3://bucket-name/sources/cars)
-
-    # cars_df.show()
+    #
+    # # S3
+    # option("path", "s3://bucket-name/sources/cars")
 
     # cars_df_v2 = spark.read. \
     #     format("json"). \
@@ -56,13 +52,6 @@ def file_system_HDFS_S3_FTP():
     #
 
 
-    # cars_df.\
-    #     repartition(3). \
-    #     write. \
-    #     mode("overwrite"). \
-    #     option("compression", "snappy"). \
-    #     parquet("../sources/parquet"). \
-    #     save()
 
 
     # spark.sql("create schema example")
@@ -194,9 +183,8 @@ def file_system_HDFS_S3_FTP():
         mode("overwrite"). \
         json("../sources/json")
 
- #    partitionBy("Year"). \
- # \
-        # Parquet = binary data, high compression, low CPU usage, very fast
+    # partitionBy("Year").
+    # Parquet = binary data, high compression, low CPU usage, very fast
     # also contains the schema
     # the default data format in Spark
 
@@ -218,11 +206,32 @@ def data_formats_json_avro_parquet():
     state_names_df.show()
     state_names_df.printSchema()
 
+    hconf = spark.sparkContext.hadoopConfiguration
+    hconf.setInt("dfs.replication", 3)
+
     state_names_df \
         .coalesce(1) \
         .write \
         .mode("overwrite") \
-        .parquet("../target/statenames_parquet")
+        .save("../target/statenames_parquet")
+
+    state_names_df.write\
+        .orc("hdfs//:raw/table_name_orc")
+
+    state_names_df.write\
+        .csv("hdfs//:raw/table_name_orc")
+
+    state_names_df.write\
+        .json("hdfs//:raw/table_name_orc")
+
+    state_names_df.write\
+        .format("avro")\
+        .save("namesAndFavColors.avro_orc")
+
+
+
+    state_names_df.write.csv("hdfs//:raw/table_name")
+
 
 
 # reading data from external JDBC (Postgres)
@@ -233,27 +242,25 @@ password = "docker"
 
 
 def jdbc_postgres_oracle():
-    DBPARAMS = {
-        "user": user,
-        "password": password,
-        "driver": driver
-    }
 
-    employees = "public.employees"
     employees_pruned = """(select e.first_name, e.last_name, e.hire_date from public.employees e where e.gender = 'F') as new_emp"""
 
+    url = "jdbc:postgresql://localhost:5432/spark"
+    employees = "public.employees"
 
-    # 10101        99999
-    # 10102        99998
-    # 10103        10103
-
-
-
-
+    DBPARAMS = {
+        "user": "docker",
+        "password": "docker",
+        "driver": "org.postgresql.Driver"
+    }
 
     # df = spark.\
     #     read.\
-    #     jdbc(url=url, table=employees, properties=DBPARAMS)
+    #     jdbc(url=url, table=employees_pruned, properties=DBPARAMS)
+
+    # print(df.rdd.getNumPartitions())
+
+    # df.show()
 
     # print("GET NUM PARTITIONS")
     # print(df.rdd.getNumPartitions())
@@ -262,21 +269,68 @@ def jdbc_postgres_oracle():
     # df.agg(F.max(F.col("emp_no")), F.min(F.col("emp_no"))).show()
 
 
-    # df = spark.read.jdbc(url=url, table="public.employees", properties=DBPARAMS,
-    #                      column="emp_no", lowerBound = 10010, upperBound = 499990, numPartitions = 10)
+    employee_pg_df = spark.read.jdbc(url=url, table="public.employees",
+                         properties=DBPARAMS,
+                         column="emp_no", lowerBound = 10010,
+                         upperBound = 499990, numPartitions = 10)  #1000 000
+
+    # action_mongo_df = spark.read.mongo # 10 000
+
+    employee_pg_df.write.jdbc("jdbc:postgresql:dbserver", "schema.tablename", DBPARAMS)
+
+
+    # Driver
+    # rest_client_connection = ""
+    b = spark.sparkContext.broadcast(rest_client_connection = "init")
+
+    # action_mongo_df.join(employee_pg_df, col("if") === col("emp_id"), "outer") // 10 000
+
+    # index -> key
 
     # lowerBound = 10010
     # upperBound = 499990
     #
     # ex1 => part1 => select * from public.employees e where e.emp_num > x and e.emp_num
     # ex2 => part2 =
-
-    pred = ["gender = 'F'", "gender = 'M'", "gender = 'M'"]
     # be carefully with borders
-    pred2 = ["emp_no > 10010 and emp_no <= 50000", "emp_no >= 50000 and emp_no <= 100000"]
+    pred2 = ["emp_no > 10010 and emp_no <= 50000", "emp_no > 50000 and emp_no <= 100000"]
 
-    df = spark.read.jdbc(url=url, table="public.employees", properties=DBPARAMS, predicates =pred)
-    df.show()
+
+    # pred = ["gender = 'F'", "gender = 'M'", "gender = 'M'"]
+    #
+    # df = spark.\
+    #     read.\
+    #     jdbc(url=url, table="public.employees", properties=DBPARAMS, predicates=pred)
+
+
+
+    # df.select(col("emp_no"), col("gender"))
+    # df.show()
+    # print(df.rdd.getNumPartitions())
+
+
+
+
+
+    #
+
+    # source => target
+    # db2 => csv => parquet
+
+    # db2 => parquet by db2
+    # pfrfllelism
+    # orchestration
+    # no csc
+
+    # flow - cron - 12 am
+    # airflow - db2 connect
+    # processing
+
+
+    # kafka json => hdfs json => hdfs parquet
+
+
+
 
 
     # lowerBound = 10010,
@@ -397,5 +451,5 @@ def queue_kafka():
     """
 
 if __name__ == '__main__':
-    file_system_HDFS_S3_FTP()
+    jdbc_postgres_oracle()
     sleep(100000)
