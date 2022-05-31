@@ -30,8 +30,6 @@ from pyspark.context import SparkContext
 # sc = SparkContext(conf=conf)
 
 
-
-
 def split_row(row):
     return row.split(",")
 

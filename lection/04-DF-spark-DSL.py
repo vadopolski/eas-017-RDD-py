@@ -11,9 +11,9 @@ spark = SparkSession. \
     master("local"). \
     config("spark.jars", "../jars/postgresql-42.2.19.jar"). \
     config("spark.sql.autoBroadcastJoinThreshold", -1). \
-    config("spark.sql.legacy.timeParserPolicy", "LEGACY"). \
     getOrCreate()
 
+#     config("spark.sql.legacy.timeParserPolicy", "LEGACY"). \
 
 spark.conf.set("spark.sql.shuffle.partitions", 14)
 
@@ -50,9 +50,9 @@ def aggregations():
     # print(genres_count_number)
 
     # count distinct NOT WORKING
-    unique_genres_df = movies_df\
-        .select(F.countDistinct(F.col("Major_Genre")))
-    print("COUNT DISTINCT Genre wit select")
+    # unique_genres_df = movies_df\
+    #     .select(F.countDistinct(F.col("Major_Genre")))
+    # print("COUNT DISTINCT Genre wit select")
     # print(unique_genres_df)
 
     unique_genres_df_v2 = movies_df\
@@ -76,25 +76,49 @@ def aggregations():
     us_industry_total_df = movies_df\
         .select(sum(col("US_Gross")))
     print("sum US_Gross")
-    us_industry_total_df.show()
+    # us_industry_total_df.show()
 
     us_industry_total_df_v2 = movies_df\
         .selectExpr("sum(US_Gross)")
     print("sum US_Gross Expr")
-    us_industry_total_df_v2.show()
+    # us_industry_total_df_v2.show()
 
     # avg
     avg_rt_rating_df = movies_df.select(avg(col("Rotten_Tomatoes_Rating")))
     print("avg Rotten_Tomatoes_Rating")
     avg_rt_rating_df.show()
+    avg_rt_rating_df.explain(True)
+
+    # avg
+    avg_rt_rating_expr_df = movies_df.selectExpr("avg(Rotten_Tomatoes_Rating)")
+    print("avg expression Rotten_Tomatoes_Rating")
+    avg_rt_rating_expr_df.show()
+    avg_rt_rating_expr_df.explain(True)
 
     # mean/standard dev
     rt_stats_df = movies_df.agg(
-        mean(col("Rotten_Tomatoes_Rating")),
-        stddev(col("Rotten_Tomatoes_Rating"))
+        mean(col("Rotten_Tomatoes_Rating").alias("MEAN")),
+        stddev(col("Rotten_Tomatoes_Rating").alias("STDEV"))
     )
     # print("mean/standard dev")
-    # rt_stats_df.show()
+    rt_stats_df.show()
+
+    rt_stats_df = movies_df.selectExpr("mean(Rotten_Tomatoes_Rating)", "stddev(Rotten_Tomatoes_Rating)")
+    rt_stats_df.show()
+
+#
+# == Physical Plan ==
+# *(2) HashAggregate(keys=[], functions=[avg(Rotten_Tomatoes_Rating#16L)], output=[avg(Rotten_Tomatoes_Rating)#129])
+# +- Exchange SinglePartition, ENSURE_REQUIREMENTS, [id=#103]
+#    +- *(1) HashAggregate(keys=[], functions=[partial_avg(Rotten_Tomatoes_Rating#16L)], output=[sum#136, count#137L])
+#       +- FileScan json [Rotten_Tomatoes_Rating#16L] Batched: false, DataFilters: [], Format: JSON, Location: InMemoryFileIndex[file:/C:/Users/VOpolskiy/PycharmProjects/eas-017-RDD-py/sources/movies], PartitionFilters: [], PushedFilters: [], ReadSchema: struct<Rotten_Tomatoes_Rating:bigint>
+
+# *(2) HashAggregate(keys=[], functions=[avg(Rotten_Tomatoes_Rating#16L)], output=[avg(Rotten_Tomatoes_Rating)#116])
+# +- Exchange SinglePartition, ENSURE_REQUIREMENTS, [id=#65]
+#    +- *(1) HashAggregate(keys=[], functions=[partial_avg(Rotten_Tomatoes_Rating#16L)], output=[sum#123, count#124L])
+#       +- FileScan json [Rotten_Tomatoes_Rating#16L] Batched: false, DataFilters: [], Format: JSON, Location: InMemoryFileIndex[file:/C:/Users/VOpolskiy/PycharmProjects/eas-017-RDD-py/sources/movies], PartitionFilters: [], PushedFilters: [], ReadSchema: struct<Rotten_Tomatoes_Rating:bigint>
+
+
 
 
 def grouping():
@@ -149,7 +173,6 @@ def grouping():
         5. Show the average difference between IMDB rating and Rotten Tomatoes rating
 """
 
-# avg(IMDB rating - Rotten Tomatoes) != avg(IMDB rating) - avg(Rotten Tomatoes)
 
 guitars_df = spark.read.json("../sources/guitars")
 guitar_players_df = spark.read.json("../sources/guitarPlayers")
@@ -161,41 +184,36 @@ def joins():
     join_condition = guitar_players_df.band == bands_df.id
 
     guitarists_bands_df = guitar_players_df \
-        .join(bands_df, join_condition, "inner") \
-        .filter(guitar_players_df.band.isNull()) \
-        .filter(guitar_players_df.name.isNull()) \
-        .filter(guitar_players_df.id.isNull()) \
-
+        .join(bands_df, join_condition, "left_outer")
 
     guitarists_bands_df.explain(True)
-    guitarists_bands_df.show()
-
-
-
-
-    #                     ^^ "left" DF            ^^ "right" DF
     # guitarists_bands_df.show()
 
-    # node 1 => 1|    [1]|  1| Angus Young|     Sydney|
-    # node 2 => 1|       AC/DC|1973|
-    # node 3 => 1|    [1]|  1| Angus Young|     Sydney| 1|       AC/DC|1973|
-    # node 4 => 2, 4
-    # node 5 => 11, 12
-    #
-    # +----+-------+---+------------+-----------+---+------------+----+
-    # |band|guitars| id|        name|   hometown| id|        name|year|
-    # +----+-------+---+------------+-----------+---+------------+----+
-    # |   1|    [1]|  1| Angus Young|     Sydney|  1|       AC/DC|1973|
-    # |   0|    [0]|  0|  Jimmy Page|     London|  0|Led Zeppelin|1968|
-    # |   3|    [3]|  3|Kirk Hammett|Los Angeles|  3|   Metallica|1981|
-    # +----+-------+---+------------+-----------+---+------------+----+
-    #
 
+    guitarists_bands_broadcast_df = guitar_players_df \
+        .join(broadcast(bands_df), join_condition, "left_outer")
+
+    guitarists_bands_broadcast_df.explain(True)
+    # guitarists_bands_broadcast_df.show()
+
+
+        # 100 000 rows upper 100 000 cals - before join
+        # 100 rows upper 100 cals - after before join
 
     # differentiate the "name" column - use the reference from the original DF
     guitarists_bands_upper_df = guitarists_bands_df.select(upper(bands_df.name))
-    # guitarists_bands_upper_df.show()
-    # guitarists_bands_upper_df.explain()
+    guitarists_bands_upper_df.show()
+    guitarists_bands_upper_df.explain()
+
+
+    # differentiate the "name" column - use the reference from the original DF
+    # guitarists_bands_upper_df = guitarists_bands_df.select(upper(bands_df.name), lit(1), lit(2), ..... , lit(1))
+    # 100 -
+    # size of row with 5 columns less then 105 columns -> huge amount of shuffle - ????
+    # 100 000
+
+
+
 
 
     # left outer = everything in the inner join + all the rows in the LEFT DF that were not matched (with nulls in the cols for the right DF)

@@ -7,6 +7,7 @@ spark = SparkSession. \
     appName("Data Sources"). \
     master("local"). \
     config("spark.jars", "../jars/postgresql-42.2.19.jar"). \
+    config("spark.jars", "../jars/udf_jars.jar"). \
     config("spark.sql.legacy.timeParserPolicy", "LEGACY"). \
     getOrCreate()
 
@@ -43,37 +44,35 @@ def window_functions():
     # result_sql_df2.show()
 
     windowSpec = Window.partitionBy("department").orderBy(F.col("salary").desc())
-    # windowSpec = Window.orderBy(F.col("salary").desc())
     result_with_rank_df = employeeDF.\
         withColumn("rank", F.rank().over(windowSpec)).\
         withColumn("dense_rank", F.dense_rank().over(windowSpec))
-    result_with_rank_df.explain()
-    result_with_rank_df.show()
+    # result_with_rank_df.explain()
+    # result_with_rank_df.show()
 
 
     result_sql_df = spark.sql("""
-                                        select 
-                                            employee_name, 
-                                            department, 
-                                            salary, 
-                                            count(*) OVER () as cnt
-                                        from employee
+            select 
+                employee_name, 
+                department, 
+                salary, 
+                count(*) OVER () as cnt
+            from employee
     """)
-
-
     result_sql_df.explain(True)
     result_sql_df.show()
 
+    # windowSpec = Window.orderBy(F.col("salary").desc())
     # single_part_df_1 = employeeDF. \
-    #     withColumn("count", count().over(windowSpec))
-    # print("DON'T ADD COUNT")
-    # result_sql_df.show()
-    # result_sql_df.explain()
+    #     withColumn("count", count("*"))
+    print("DON'T ADD COUNT")
+    # single_part_df_1.show()
+    # single_part_df_1.explain()
 
+    print("CORRECT WAY")
     cnt = employeeDF.count()
     result_with_count_df = employeeDF.\
-        withColumn("count", F.lit(employeeDF.count()))
-    print("CORRECT WAY")
+        withColumn("count", F.lit(cnt))
     result_with_count_df.show()
     result_with_count_df.explain()
 
@@ -93,12 +92,46 @@ def window_functions():
 
 
 # UDF, UDAF
+
+
 def user_define_functions():
+    jvm = spark.sparkContext._jvm.dataframe.employeeFromRepositoryUDF().apply()
+
+
+
+    employee_df = spark.read.jdbc("", "")
+    depart_df = spark.read.csv("department.csv")
+
+    joined_df = employee_df.join(depart_df, employee_df.dep_id == depart_df.id, "left")
+
+    # depart_df.select(col(depart_df.id))
+    # depart_df.select(get_row_by_id_from_employee_id_udf(col(depart_df.id)))
+    #
+    # get_row_by_id_from_employee_id_udf = udf(some_method_from_repository(""))
+    #
+
+
+
+
+    #
+    # calendar_df.select(get_days_by_doctor_name_udf("Alex"))
+
+
     # Step-1: Define and register UDF function
+
     lambda_is_world_war_two_year = lambda year: 1939 <= year <= 1945
 
+    # def lambda_is_world_war_two_year(year: Int) {
+    #     year <= 1939 && year >= 1945
+    # }
+    #
+    # boolean lambda_is_world_war_two_year(int year) { => 0
+    # boolean lambda_is_world_war_two_year(Integer year) {
+    #     year <= 1939 && year >= 1945
+    # }
+
     # 1 way
-    is_world_war_two_year = udf(lambda_is_world_war_two_year)
+    is_world_war_two_year_udf = udf(lambda_is_world_war_two_year)
 
     # 2 way
     spark.udf.register("isWorldWarTwoYear", lambda_is_world_war_two_year)
@@ -116,7 +149,7 @@ def user_define_functions():
         show(150)
 
     stateNames.\
-        select(F.col("Year"), is_world_war_two_year(F.col("Year"))).\
+        select(F.col("Year"), is_world_war_two_year_udf(F.col("Year"))).\
         distinct().\
         show(150)
 

@@ -25,6 +25,7 @@ def dml_ddl_expressions():
         select(col("Name"))
     print("SPARK DSL DF API")
     american_cars_df.show(10, False)
+    american_cars_df.explain()
 
     # store as a Spark table dont write data to storage EXTERNAL TABLE
     #  DataFrame => SQL metastore
@@ -32,13 +33,14 @@ def dml_ddl_expressions():
     cars_df.createOrReplaceTempView("cars")
 
     cars_df = spark.read.json("../sources/cars")
-    cars_df.createOrReplaceTempView("cars")
+    # cars_df.createOrReplaceTempView("cars")
     spark.sql("DROP TABLE cars")
 
     # run SQL queries on top of DFs known to Spark under a certain name
     # american_cars_df_v2 = spark.sql("SELECT Name FROM cars WHERE Origin = 'Japan'")
     print("SPARK DSL DF API")
-    # american_cars_df_v2.show()
+    # american_cars_df_v2.show(10, False)
+    # american_cars_df_v2.explain()
 
     # DROPPING EXTERNAL TABLE DOES NOT DELETE DATA, ONLY IN METASTORE
     print("DROPPING EXTERNAL TABLE")
@@ -57,28 +59,30 @@ def dml_ddl_expressions():
         save("../sources/cars_parq")
 
 
+    spark.sql("CREATE SCHEMA my_schema")
+
     cars_df.\
         write.\
         mode("overwrite").\
-        saveAsTable("cars_managed_table")
+        saveAsTable("my_schema.cars_managed_table")
     # parquet("../sources/parquet"). \
     #     save()
 
     print("READ FROM MANAGED STORAGE 1")
     assert(cars_df.count() != 0)
-    american_cars_df_v2 = spark.sql("SELECT * FROM cars_managed_table")
+    american_cars_df_v2 = spark.sql("SELECT * FROM my_schema.cars_managed_table")
     assert(american_cars_df_v2.count() != 0)
     american_cars_df_v2.show()
 
     print("READ FROM MANAGED STORAGE 2")
-    cars_managed_df = spark.table("cars_managed_table")
+    cars_managed_df = spark.table("my_schema.cars_managed_table")
     # cars_managed_df = spark.read.table("cars_managed_table")
     print("MANAGED TABLE")
     assert (cars_managed_df.count() != 0)
     cars_managed_df.show()
 
     print("DROPPING MANGED TABLE")
-    spark.sql("DROP TABLE cars_managed_table")
+    spark.sql("DROP TABLE my_schema.cars_managed_table")
 
     print("READING FROM MANAGED TABLE 2")
     # cars_managed_df.show()

@@ -1,1 +1,37 @@
-{"business_id": "abc", "full_address": "random_address", "hours": {"Monday": {"close": "02:00", "open": "11:00"}, "Tuesday": {"close": "02:00", "open": "11:00"}, "Friday": {"close": "02:00", "open": "11:00"}, "Wednesday": {"close": "02:00", "open": "11:00"}, "Thursday": {"close": "02:00", "open": "11:00"}, "Sunday": {"close": "00:00", "open": "11:00"}, "Saturday": {"close": "02:00", "open": "11:00"}}}
+{
+  "business_id": "abc",
+  "full_address": "random_address",
+  "hours": {
+    "Monday": {
+      "close": "02:00",
+      "open": "11:00",
+      "doctors": ["John", "Alex"]
+    },
+    "Tuesday": {
+      "close": "02:00",
+      "open": "11:00"
+    },
+    "Friday": {
+      "close": "02:00",
+      "open": "11:00",
+      "doctors": ["Mike", "Alex"]
+    },
+    "Wednesday": {
+      "close": "02:00",
+      "open": "11:00",
+      "doctors": ["Lora", "Alex"]
+    },
+    "Thursday": {
+      "close": "02:00",
+      "open": "11:00"
+    },
+    "Sunday": {
+      "close": "00:00",
+      "open": "11:00"
+    },
+    "Saturday": {
+      "close": "02:00",
+      "open": "11:00"
+    }
+  }
+}
