@@ -348,5 +348,5 @@ def rdd_saving():
 
 
 if __name__ == '__main__':
-    group_join()
+    rdd_saving()
     sleep(10000)

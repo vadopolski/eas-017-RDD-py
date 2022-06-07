@@ -37,6 +37,7 @@ def join_optimisation():
         option("inferSchema", "true").\
         csv("../sources/crimes/offense_codes.csv")
 
+
     offense_сodes.show(100, False)
 
     print("Sort Merge Join")
@@ -71,6 +72,19 @@ def join_optimisation():
 
 
 
+def acc_broadcast():
+    sc = spark.sparkContext
+    accum = sc.accumulator(0)
+
+    sc.parallelize([1, 2, 3, 4]).foreach(lambda x: accum.add(x))
+
+    print("BroadCast variable")
+    print(accum.value)
+
+    broadcastVar = sc.broadcast([1, 2, 3])
+    print(broadcastVar.value)
+
+
 if __name__ == '__main__':
-    join_optimisation()
+    acc_broadcast()
     sleep(10000)

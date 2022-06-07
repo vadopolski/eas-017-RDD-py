@@ -31,13 +31,14 @@ def demo_booleans():
     # can add the col object as a column/property for every row
     movies_with_good_drama_condition_df = movies_df\
         .select(col("Title"), good_drama_filter.alias("IsItAGoodDrama"))
-    # movies_with_good_drama_condition_df.show()
+    movies_with_good_drama_condition_df.show()
 
     # can filter using the true/false value of a column
     good_dramas_df_v2 = movies_with_good_drama_condition_df\
         .filter("IsItAGoodDrama")
 
-    # good_dramas_df_v2.show()
+    good_dramas_df_v2.show()
+    good_dramas_df_v2.explain(True)
 
     drama_filter = movies_df.Major_Genre == "Drama"
     good_rating_filter = movies_df.IMDB_Rating > 7.0
@@ -45,6 +46,7 @@ def demo_booleans():
     bad_drama_filter = ~(good_rating_filter & drama_filter)
     bad_dramas = movies_df.select(col("Title"), bad_drama_filter)
     bad_dramas.show()
+    bad_dramas.explain(True)
 
 
 def demo_numerical_ops():
@@ -144,6 +146,8 @@ def complex_type():
         selectExpr("Title",
                    "((IMDB_Rating, Rotten_Tomatoes_Rating) as Rating, (US_Gross, Worldwide_Gross, US_DVD_Sales) as Profit) as Success")
     print("nested data structures")
+
+    movies_struct_df_v3.printSchema()
     movies_struct_df_v3.show(10, False)
 
     movies_struct_df_v3. \
@@ -188,6 +192,8 @@ def date_type():
     # string to type
     movies_with_release_dates_df = movies_df.select(
         col("Title"),
+        lit("1985-12-29").alias("fixed"),
+        (col("Release_Date") == col("fixed")),
         to_date(col("Release_Date"), "dd-MMM-YY").alias("Actual_Release")
     )
 
@@ -196,7 +202,7 @@ def date_type():
 
     # date operations
     enriched_movies_df = movies_with_release_dates_df. \
-        withColumn("Today", current_date()). \
+        withColumn("Today", current_date() - 1). \
         withColumn("Right_Now", current_timestamp()). \
         withColumn("Movie_Age", datediff(col("Today"), col("Actual_Release")) / 365)
 
@@ -215,6 +221,22 @@ def date_type():
         withColumn("Actual_Date", coalesce(col("Date_F1"), col("Date_F2")))
 
     movies_with_2_formats.show(10, False)
+
+    # Joda
+    # Time:
+    # import org.joda.time.DateTime
+    # rdd.map(row= > new
+    # Timestamp(row.getTimestamp(1).getTime - 3600000)).map(ts= > new
+    # DateTime(ts).hourOfDay.get)
+    #
+    # или
+    #
+    # import java.time.LocalDateTime
+    # import java.time.format.DateTimeFormatter
+    # rdd.map(row= > LocalDateTime.parse(row.tpep_pickup_datetime.get,
+    #                                    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")).getHour)
+
+
 
 if __name__ == '__main__':
     date_type()
