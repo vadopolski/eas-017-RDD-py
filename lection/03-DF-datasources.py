@@ -442,12 +442,12 @@ def queue_kafka():
 
 
     """
-    Exercise: read the movies DF, then write it as
+    Lab #2: read the movies DF, then write it as
     - tab-separated "CSV"
     - parquet
     - table "public.movies" in the Postgres DB
 
-    Exercise #2: find a way to read the people-1m dataFrame. Then write it as JSON.
+    Lab #3: find a way to read the people-1m dataFrame. Then write it as JSON.
     """
 
 if __name__ == '__main__':

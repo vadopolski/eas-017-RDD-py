@@ -165,7 +165,7 @@ def grouping():
 
 
 """
-    Exercises
+    Lab #3
         1. Sum up ALL the profits of ALL the movies in the dataset
         2. Count how many distinct directors we have
         3. Show the mean, stddev for US gross revenue
@@ -273,12 +273,12 @@ def read_table(table_name):
 # departments_df = read_table("departments")
 
 """
-Exercises
-Read the tables in the Postgres database: employees, salaries, dept_emp
-1. show all employees and their max salary over time
-2. show all employees who were never managers
-3. for every employee, find the difference between their salary (current/latest) and 
-    the max salary of their department (departments table)
+Lab #4
+    Read the tables in the Postgres database: employees, salaries, dept_emp
+    1. show all employees and their max salary over time
+    2. show all employees who were never managers
+    3. for every employee, find the difference between their salary (current/latest) and 
+        the max salary of their department (departments table)
 """
 
 if __name__ == '__main__':

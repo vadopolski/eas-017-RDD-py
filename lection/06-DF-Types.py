@@ -97,7 +97,7 @@ def demo_regexes():
     vw_new_name_df.show(20, False)
 
 """
-Exercise
+Lab #6
     Filter the cars DF, return all cars whose name contains either element of the list
     - contains function
     - regexes

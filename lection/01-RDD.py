@@ -278,7 +278,7 @@ def group_join():
     grouped.toDebugString().decode("utf-8")
 
     """
-    Exercises
+    Lab 1
         1. Read the movies dataset as an RDD    
         2. Show the distinct genres as an RDD
         3. Print all the movies in the Drama genre with IMDB rating > 6

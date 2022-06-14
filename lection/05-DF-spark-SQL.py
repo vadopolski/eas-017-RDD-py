@@ -126,9 +126,10 @@ def read_table(table_name):
         load()
 
 """
-1. show all employees and their max salary over time
-2. show all employees who were never managers
-3. * for every employee, find the difference between their salary (current/latest) and the max salary of their department (departments table)
+Lab #5
+    1. show all employees and their max salary over time
+    2. show all employees who were never managers
+    3. * for every employee, find the difference between their salary (current/latest) and the max salary of their department (departments table)
 """
 
 def exersices():
